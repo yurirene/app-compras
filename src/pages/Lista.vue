@@ -1,45 +1,51 @@
 <template>
     <div >
         <q-page padding>
-            <q-card class="my-card q-mb-md">
-                <q-item>
-                    <q-item-section>
-                        <q-item-label>Adicionar Item na Lista</q-item-label>
-                    </q-item-section>
-                </q-item>
-
-                <q-separator />
-                <q-card-section>
-                    <q-form ref="formulario"> 
-                        <q-select 
-                            rounded outlined 
-                            v-model="tipo" 
-                            :options="categorias" 
-                            label="Categoria" 
-                            class="q-mb-sm" 
-                            @update:model-value="categoriaSelecionada()"
-                            :rules="[val => !!val || 'Este campo é obrigatório']" 
-                        />
-                        <q-select 
-                            rounded outlined 
-                            v-model="nome" 
-                            :options="produtos" 
-                            label="Produto" 
-                            class="q-mb-sm"
-                            :rules="[val => !!val || 'Este campo é obrigatório']" 
-                        />
-                        <q-input 
-                            rounded outlined 
-                            v-model.number="quantidade" 
-                            type="number"
-                            label="Quantidade"  
-                            class="q-mb-sm"
-                            :rules="[val => !!val || 'Este campo é obrigatório']"  
-                        />
-                    </q-form>
-                    <q-btn :loading="loading"  class="full-width" icon-right="send" label="Adicionar" color="primary" @click="adicionarNaLista()"/>
-                </q-card-section>
+            <q-card class="q-mb-md" style="border-radius: 30px">
+                <q-expansion-item
+                    expand-separator
+                    label="Adicionar Item na Lista"
+                    icon="la la-cart-plus"
+                    class="shadow-1 overflow-hidden"
+                    style="border-radius: 30px"
+                    header-class="bg-primary text-white"
+                    expand-icon-class="text-white"
+                >
+                    <q-card class="my-card q-mb-md">
+                        <q-card-section>
+                            <q-form ref="formulario"> 
+                                <q-select 
+                                    rounded outlined 
+                                    v-model="tipo" 
+                                    :options="categorias" 
+                                    label="Categoria" 
+                                    class="q-mb-sm" 
+                                    @update:model-value="categoriaSelecionada()"
+                                    :rules="[val => !!val || 'Este campo é obrigatório']" 
+                                />
+                                <q-select 
+                                    rounded outlined 
+                                    v-model="nome" 
+                                    :options="produtos" 
+                                    label="Produto" 
+                                    class="q-mb-sm"
+                                    :rules="[val => !!val || 'Este campo é obrigatório']" 
+                                />
+                                <q-input 
+                                    rounded outlined 
+                                    v-model.number="quantidade" 
+                                    type="number"
+                                    label="Quantidade"  
+                                    class="q-mb-sm"
+                                    :rules="[val => !!val || 'Este campo é obrigatório']"  
+                                />
+                            </q-form>
+                            <q-btn :loading="loading"  class="full-width" icon-right="send" label="Adicionar" color="primary" @click="adicionarNaLista()"/>
+                        </q-card-section>
+                    </q-card>
+                </q-expansion-item>
             </q-card>
+            
             
             <list :lista="lista"  @clickLista="clicou"></list>
             
@@ -51,15 +57,18 @@
                 </q-card>
             </q-dialog>
             <q-dialog v-model="confirm" persistent>
-                <q-card>
-                    <q-card-section class="row items-center">
-                        <q-avatar icon="close" color="negative" text-color="white" />
-                        <span class="q-ml-sm">Deseja Remover o Item da Lista?</span>
+                <q-card style="width: 300px">
+                    <q-card-section>
+                        <div class="text-h6">Ações</div>
                     </q-card-section>
 
-                    <q-card-actions align="right">
-                        <q-btn flat label="Não" color="primary" v-close-popup @click="this.id_exclusao=0" />
-                        <q-btn flat label="Confirmar" color="primary" v-close-popup @click="excluir(this.id_exclusao)" :loading="loading" />
+                    <q-card-actions align="around">
+                        <q-btn round color="warning" icon="la la-pen"   @click="form_editar = true"/>
+                        <q-btn round color="negative" icon="la la-trash"   @click="form_excluir = true"/>    
+                    </q-card-actions>
+                    <q-card-actions align="right" v-if="form_excluir">
+                        <q-btn flat label="Não" color="primary" v-close-popup @click="this.id_item_selecionado=0" />
+                        <q-btn flat label="Confirmar" color="primary" v-close-popup @click="excluir(this.id_item_selecionado)" :loading="loading" />
                     </q-card-actions>
                 </q-card>
             </q-dialog>
@@ -90,7 +99,9 @@ export default {
             },
             lista: [],
             confirm: false,
-            id_exclusao: 0
+            id_item_selecionado: 0,
+            form_editar: false,
+            form_excluir: false
         }
     },
     methods: {
@@ -103,7 +114,7 @@ export default {
                     dados.append('produto_id', this.nome.value)
                     dados.append('quantidade', this.quantidade)
 
-                    api.post('/api/lista', dados)
+                    api.post('/api/add-item-lista', dados)
                         .then((response) => {
                             this.loading = false;
                             if (response.status == 200) {
@@ -137,7 +148,7 @@ export default {
             });
         },
         clicou: function(value) {
-            this.id_exclusao = value;
+            this.id_item_selecionado = value;
             this.confirm = true;
         },
         excluir: function(value) {

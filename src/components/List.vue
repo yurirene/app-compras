@@ -4,18 +4,18 @@
             
             <q-separator />
             <q-item-label header class="bg-teal-1">
-                <i class="las  la-lg la-bell"></i> {{categoria.categoria}}
+                <i :class="categoria.icon"></i> {{categoria.categoria}}
             </q-item-label>
             <q-separator />
             
             <q-item clickable v-ripple  v-for="(item, j) in categoria.produtos" :key="j" @click="clicou(item.id);">
+                
                 <q-item-section>
                     {{ item.produto }}
                 </q-item-section>
                 <q-item-section avatar >
                     {{ item.quantidade }}
-                </q-item-section>
-                
+                </q-item-section>                
             </q-item>
         </div>
         
