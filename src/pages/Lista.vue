@@ -47,7 +47,7 @@
             </q-card>
             
             
-            <list :lista="lista"  @clickLista="clicou"></list>
+            <list :lista="lista"  @clickEditar="clicouEditar" @clickApagar="clicouApagar"></list>
             
             <q-dialog v-model="modal.show" :position="modal.position">
                 <q-card style="width: 350px" :class="modal.classe">
@@ -56,17 +56,42 @@
                     </q-card-section>
                 </q-card>
             </q-dialog>
-            <q-dialog v-model="confirm" persistent>
+
+
+            <q-dialog v-model="editar_item" persistent ref="modal_edicao">
                 <q-card style="width: 300px">
                     <q-card-section>
-                        <div class="text-h6">Ações</div>
+                        <div class="text-h6">Editar Item da Lista</div>
+                    </q-card-section>
+                    <q-card-section>
+                        <q-form ref="formulario_edicao">
+                            <q-input 
+                                rounded outlined 
+                                v-model.number="quantidade_edicao" 
+                                type="number"
+                                label="Quantidade"  
+                                class="q-mb-sm"
+                                :rules="[val => !!val || 'Este campo é obrigatório']"  
+                            />
+                        </q-form>
+                    </q-card-section>
+                    <q-card-actions align="right">
+                        <q-btn flat label="Não" color="primary" v-close-popup />
+                        <q-btn flat label="Confirmar" color="primary"  @click="editar" :loading="loading" />
+                    </q-card-actions>
+                </q-card>
+            </q-dialog>
+            <q-dialog v-model="apagar_item" persistent>
+                <q-card style="width: 300px">
+                    <q-card-section>
+                        <div class="text-h6">Excluir Item da Lista</div>
                     </q-card-section>
 
-                    <q-card-actions align="around">
-                        <q-btn round color="warning" icon="la la-pen"   @click="form_editar = true"/>
-                        <q-btn round color="negative" icon="la la-trash"   @click="form_excluir = true"/>    
-                    </q-card-actions>
-                    <q-card-actions align="right" v-if="form_excluir">
+                    <q-card-section>
+                        <div class="text-h6">Você confirma essa operação?</div>
+                    </q-card-section>
+
+                    <q-card-actions align="right">
                         <q-btn flat label="Não" color="primary" v-close-popup @click="this.id_item_selecionado=0" />
                         <q-btn flat label="Confirmar" color="primary" v-close-popup @click="excluir(this.id_item_selecionado)" :loading="loading" />
                     </q-card-actions>
@@ -100,8 +125,9 @@ export default {
             lista: [],
             confirm: false,
             id_item_selecionado: 0,
-            form_editar: false,
-            form_excluir: false
+            editar_item: false,
+            apagar_item: false,
+            quantidade_edicao: 0,
         }
     },
     methods: {
@@ -147,15 +173,54 @@ export default {
                 this.lista = response.data
             });
         },
-        clicou: function(value) {
-            this.id_item_selecionado = value;
-            this.confirm = true;
+        clicouEditar: function(value) {
+            this.id_item_selecionado = value.id;
+            this.quantidade_edicao = value.quantidade;
+            this.editar_item = true;
         },
-        excluir: function(value) {
+        
+        clicouApagar: function(value) {
+            this.id_item_selecionado = value;
+            this.apagar_item = true;
+        },
+
+        editar: function() {
+
+            this.loading = true;
+            
+            this.$refs.formulario_edicao.validate();
+            
+            const dados = new FormData();
+            dados.append('produto_id', this.id_item_selecionado)
+            dados.append('quantidade', this.quantidade_edicao)
+
+            api.post('/api/edit-item-lista', dados)
+                .then((response) => {
+                    this.loading = false;
+                    if (response.status == 200) {
+                        this.modal.show = true;
+                        this.modal.classe = 'bg-positive';
+                        this.modal.texto = response.data.message;
+                    } else {
+                        this.modal.show = true;
+                        this.modal.classe = 'bg-negative';
+                        this.modal.texto = response.data.message;
+                    }
+                    this.getLista();
+                });
+
+            this.$refs.modal_edicao.hide();
+
+            setTimeout(() => {
+                this.modal.show = false;
+            }, 2000);
+
+        },
+        excluir: function() {
             this.loading = true;
             const dados = new FormData();
-            dados.append('produto_id', value)
-            api.post('/api/excluir-produto-lista', dados)
+            dados.append('produto_id', this.id_item_selecionado)
+            api.post('/api/delete-item-lista', dados)
                 .then((response) => {
                     this.loading = false;
                     if (response.status == 200) {
