@@ -20,10 +20,15 @@
         <q-card-section class="bg-primary text-white">
             <div class=""><i class="la la-shopping-basket"></i> <b>Supermercado:</b> {{compra.supermercado}}</div>
             <div class=""><i class="la la-calendar"></i> <b>Data:</b> {{compra.data_compra}}</div>
+            <div class=""><i class="la la-dollar"></i> <b>Valor Total:</b> {{compra.valor_total}}</div>
+        </q-card-section>
+
+        <q-card-section class="bg-primary text-white"  align="right">
+            <q-btn outline rounded color="white" label="Finalizar" />
         </q-card-section>
     </q-card>
 
-    <list :lista="lista" v-if="!form_compra"></list>
+    <list :lista="lista" v-if="!form_compra" :compras="true"  @clickApagar="clicouApagar" ></list>
     
 
     <q-dialog v-model="modal.show" :position="modal.position">
@@ -33,14 +38,30 @@
             </q-card-section>
         </q-card>
     </q-dialog>
+    <q-dialog v-model="apagar_item" persistent>
+        <q-card style="width: 300px">
+            <q-card-section>
+                <div class="text-h6">Excluir Item da Lista de Comprados</div>
+            </q-card-section>
+
+            <q-card-section>
+                <div class="text-h6">Você confirma essa operação?</div>
+            </q-card-section>
+
+            <q-card-actions align="right">
+                <q-btn flat label="Não" color="primary" v-close-popup @click="this.id_item_selecionado=0" />
+                <q-btn flat label="Confirmar" color="primary" v-close-popup @click="excluir" :loading="loading" />
+            </q-card-actions>
+        </q-card>
+    </q-dialog>
 </template>
 
 <script>
-import List from 'src/components/List.vue';
-import { api } from 'boot/axios';
-import { defineComponent } from 'vue';
 
-export default defineComponent({
+import { api } from 'boot/axios';
+import List from 'src/components/List.vue';
+
+export default {
     components: { List },
     name: 'PageCompras',
     data() {
@@ -55,13 +76,52 @@ export default defineComponent({
             nome_supermercado : null,
             loading: false,
             compra: null,
-            form_compra: false
+            form_compra: false,
+            apagar_item: false,
+            id_item_selecionado: 0,
         }
     },
     methods: {
+         clicouApagar: function(value) {
+            this.id_item_selecionado = value;
+            this.apagar_item = true;
+        },
+        excluir: function() {
+            this.loading = true;
+            const dados = new FormData();
+            dados.append('produto_id', this.id_item_selecionado)
+            api.post('/api/delete-item-lista-compra', dados)
+                .then((response) => {
+                    this.loading = false;
+                    if (response.status == 200) {
+                        this.modal.show = true;
+                        this.modal.classe = 'bg-positive';
+                        this.modal.texto = response.data.message;
+                    } else {
+                        this.modal.show = true;
+                        this.modal.classe = 'bg-negative';
+                        this.modal.texto = response.data.message;
+                    }
+                    this.getLista();
+                    this.verificaCompraEmAberto();
+                });
+
+            setTimeout(() => {
+                this.modal.show = false;
+            }, 2000);
+        },
         getLista: function() {
-            api.get('api/lista')
+            if (this.compra == null) {
+                return ;
+            }
+            const dados = {
+                compra_id : this.compra.id
+            };
+            api.post('/api/lista-compra', dados)
             .then((response) => {
+                if (response.status != 200) {
+                    return ;
+                }
                 this.lista = response.data
             });
         },
@@ -96,22 +156,22 @@ export default defineComponent({
                     }
                 });
         },
-        verificaCompraEmAberto: function() {
+        async verificaCompraEmAberto() {
+
             api.get('api/compra')
             .then((response) => {
                 if (response.status == 200) {
                     this.compra = response.data;
                     this.form_compra = false;
-                    console.log(response.data);
-                    return ;
+                    this.getLista();
+                } else {
+                    this.form_compra = true;
                 }
-                this.form_compra = true;
             });
         }
     },
     mounted() {
-        this.getLista();
         this.verificaCompraEmAberto();
     }
-});
+};
 </script>

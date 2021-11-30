@@ -47,7 +47,7 @@
             </q-card>
             
             
-            <list :lista="lista"  @clickEditar="clicouEditar" @clickApagar="clicouApagar"></list>
+            <list :lista="lista"  @clickEditar="clicouEditar" @clickApagar="clicouApagar" @clickComprar="clicouComprar"  :compras="false"></list>
             
             <q-dialog v-model="modal.show" :position="modal.position">
                 <q-card style="width: 350px" :class="modal.classe">
@@ -93,7 +93,38 @@
 
                     <q-card-actions align="right">
                         <q-btn flat label="Não" color="primary" v-close-popup @click="this.id_item_selecionado=0" />
-                        <q-btn flat label="Confirmar" color="primary" v-close-popup @click="excluir(this.id_item_selecionado)" :loading="loading" />
+                        <q-btn flat label="Confirmar" color="primary" v-close-popup @click="excluir()" :loading="loading" />
+                    </q-card-actions>
+                </q-card>
+            </q-dialog>
+            <q-dialog v-model="comprar_item" persistent ref="modal_comprar">
+                <q-card style="width: 300px">
+                    <q-card-section>
+                        <div class="text-h6">Comprar Item da Lista</div>
+                    </q-card-section>
+                    <q-card-section>
+                        <q-form ref="formulario_comprar">
+                            <q-input 
+                                rounded outlined 
+                                v-model.number="quantidade_item_selecionado" 
+                                type="number"
+                                label="Quantidade"  
+                                class="q-mb-sm"
+                                :rules="[val => !!val || 'Este campo é obrigatório']"  
+                            />
+                            <q-input 
+                                rounded outlined 
+                                v-model.number="valor_item" 
+                                type="number"
+                                label="Valor"  
+                                class="q-mb-sm"
+                                :rules="[val => !!val || 'Este campo é obrigatório']"  
+                            />
+                        </q-form>
+                    </q-card-section>
+                    <q-card-actions align="right">
+                        <q-btn flat label="Não" color="primary" v-close-popup />
+                        <q-btn flat label="Confirmar" color="primary"  @click="comprar" :loading="loading" />
                     </q-card-actions>
                 </q-card>
             </q-dialog>
@@ -127,7 +158,10 @@ export default {
             id_item_selecionado: 0,
             editar_item: false,
             apagar_item: false,
+            comprar_item: false,
             quantidade_edicao: 0,
+            quantidade_item_selecionado: 0,
+            valor_item: 0
         }
     },
     methods: {
@@ -184,6 +218,12 @@ export default {
             this.apagar_item = true;
         },
 
+        clicouComprar: function(value) {
+            this.id_item_selecionado = value.id;
+            this.quantidade_item_selecionado = value.quantidade;
+            this.comprar_item = true;
+        },
+
         editar: function() {
 
             this.loading = true;
@@ -234,6 +274,34 @@ export default {
                     }
                     this.getLista();
                 });
+
+            setTimeout(() => {
+                this.modal.show = false;
+            }, 2000);
+        },
+        comprar: function() {
+            this.loading = true;
+            const dados = new FormData();
+            dados.append('produto_id', this.id_item_selecionado);
+            dados.append('quantidade', this.quantidade_item_selecionado);
+            dados.append('valor', this.valor_item);
+
+            api.post('/api/comprar-item', dados)
+                .then((response) => {
+                    this.loading = false;
+                    if (response.status == 200) {
+                        this.modal.show = true;
+                        this.modal.classe = 'bg-positive';
+                        this.modal.texto = response.data.message;
+                    } else {
+                        this.modal.show = true;
+                        this.modal.classe = 'bg-negative';
+                        this.modal.texto = response.data.message;
+                    }
+                    this.getLista();
+                });
+
+            this.$refs.modal_comprar.hide();
 
             setTimeout(() => {
                 this.modal.show = false;
